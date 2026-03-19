@@ -816,7 +816,7 @@
                         <div class="shop-address">📍 ${shop.address}</div>
                         <div class="shop-actions">
                             ${shop.phone ? `<a href="tel:${shop.phone}" class="btn-call">📞 ${shop.phone}</a>` : ''}
-                            <a href="https://uri.amap.com/navigation?to=${shop.lng},${shop.lat},${encodeURIComponent(shop.name)}&mode=car&policy=1" class="btn-nav">🚗 导航</a>
+                            <a href="https://uri.amap.com/search?keyword=${encodeURIComponent(shop.name)}" class="btn-nav">🚗 导航</a>
                         </div>
                         <div class="record-section">
                             <div class="record-row">
