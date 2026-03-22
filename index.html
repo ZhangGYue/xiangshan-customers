@@ -905,8 +905,11 @@
         
         // 我的位置
         function getLocation() {
+            alert('getLocation 被调用了！');
             if (navigator.geolocation) {
+                alert('浏览器支持定位，开始请求...');
                 navigator.geolocation.getCurrentPosition(position => {
+                    alert('定位成功！纬度:' + position.coords.latitude + ' 经度:' + position.coords.longitude);
                     userLat = position.coords.latitude;
                     userLng = position.coords.longitude;
                     
@@ -963,7 +966,9 @@
                     filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
                     renderShops();
                     updateStats();
-                }, { maximumAge: 0, enableHighAccuracy: true });
+                }, (err) => {
+                    alert('定位失败: ' + err.message);
+                }, { maximumAge: 0, enableHighAccuracy: true, timeout: 10000 });
         }
         
         }
