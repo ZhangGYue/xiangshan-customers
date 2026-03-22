@@ -963,10 +963,9 @@
                     filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
                     renderShops();
                     updateStats();
-                }, () => {
-                    // 定位被拒绝，静默处理
-                });
-            }
+                }, { maximumAge: 0, enableHighAccuracy: true });
+        }
+        
         }
         
         function calculateDistance(lat1, lng1, lat2, lng2) {
