@@ -462,6 +462,7 @@
         
         let shops = [];
         let filteredShops = [];
+        let currentSearchKeyword = '';
         let currentSearchResults = [];
         
         // 初始化
@@ -493,8 +494,15 @@
         function updateStats() {
             const manualCount = shops.filter(s => s._source === 'manual').length;
             const localCount = shops.filter(s => !s._source || s._source === 'local').length;
-            document.getElementById('stats').innerHTML = 
-                `共 ${shops.length} 家 <span style="color:#52c41a;">(手动:${manualCount})</span> <span style="color:#1890ff;">(本地:${localCount})</span>`;
+            const filteredCount = filteredShops.length;
+            const isFiltered = filteredCount !== shops.length || document.querySelectorAll('#townFilters input:checked').length > 0 || document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked').length > 0 || document.querySelectorAll('#statusFilters input:checked').length > 0;
+            if (isFiltered) {
+                document.getElementById('stats').innerHTML = 
+                    `共 <b>${filteredCount}</b> / ${shops.length} 家 <span style="color:#52c41a;">(手动:${manualCount})</span> <span style="color:#1890ff;">(本地:${localCount})</span>`;
+            } else {
+                document.getElementById('stats').innerHTML = 
+                    `共 ${shops.length} 家 <span style="color:#52c41a;">(手动:${manualCount})</span> <span style="color:#1890ff;">(本地:${localCount})</span>`;
+            }
         }
         
         function getCategoryColor(category) {
@@ -563,7 +571,7 @@
                         </div>
                         <div class="shop-info">
                             <span class="category-tag" style="background:${color};">${shop.category}</span>
-                            <span>${shop.town || shop.street || ''} · ${shop.village || shop.community || ''}</span>
+                            <span>${shop.town || shop.street || ''}</span>
                         </div>
                         <div class="shop-address">${shop.address || '暂无地址'}</div>
                         <div class="shop-actions">
@@ -603,6 +611,7 @@
         async function searchShop() {
             const keyword = document.getElementById('searchInput').value.trim();
             if (!keyword) {
+                currentSearchKeyword = '';
                 filteredShops = [...shops];
                 renderShops();
                 updateStats();
@@ -639,6 +648,7 @@
             });
             
             currentSearchResults = allResults;
+            currentSearchKeyword = keyword;
             filteredShops = allResults;
             
             // 更新统计
@@ -812,6 +822,13 @@
             const statusChecks = Array.from(document.querySelectorAll('#statusFilters input:checked')).map(cb => cb.value);
             
             filteredShops = shops.filter(shop => {
+                // 搜索关键词匹配（如果有）
+                let searchMatch = !currentSearchKeyword;
+                if (currentSearchKeyword) {
+                    const kw = currentSearchKeyword.toLowerCase();
+                    searchMatch = shop.name.toLowerCase().includes(kw) || (shop.address || '').toLowerCase().includes(kw);
+                }
+                
                 // 镇街筛选
                 let townMatch = townChecks.length === 0;
                 if (!townMatch) {
@@ -836,10 +853,11 @@
                     }
                 }
                 
-                return townMatch && categoryMatch && statusMatch;
+                return searchMatch && townMatch && categoryMatch && statusMatch;
             });
             
             renderShops();
+            updateStats();
         }
         
         // 我的位置
