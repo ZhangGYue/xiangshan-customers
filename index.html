@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>翔安区粮油客户地图 - 带拜访记录</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; max-width: 100vw; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             background: #f5f5f5;
             padding-bottom: 20px;
             -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
         }
         
         /* 头部 */
@@ -18,13 +19,14 @@
             background: #1890ff;
             color: white;
             padding: 15px;
-            text-align: center;
+            text-align: left;
             position: sticky;
             top: 0;
             z-index: 100;
         }
-        .header h1 { font-size: 18px; margin-bottom: 5px; }
-        .header p { font-size: 12px; opacity: 0.9; }
+        .header-title { display: inline-block; }
+        .header h1 { font-size: 18px; margin: 0; line-height: 1.3; }
+        .header p { font-size: 12px; opacity: 0.9; margin: 0; line-height: 1.3; }
         
         /* 数据操作菜单 */
         .data-actions {
@@ -40,7 +42,8 @@
             padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 22px;
+            vertical-align: middle;
         }
         .menu-dropdown {
             display: none;
@@ -74,23 +77,25 @@
             padding: 10px 15px;
             border-bottom: 1px solid #eee;
             display: flex;
-            gap: 10px;
+            gap: 6px;
             align-items: center;
+            overflow: hidden;
         }
         .search-location-row input {
             flex: 1;
+            min-width: 0;
             padding: 10px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
         }
         .search-location-row button {
-            padding: 10px 15px;
+            flex-shrink: 0;
+            padding: 10px 12px;
             border: none;
             border-radius: 4px;
             font-size: 14px;
             cursor: pointer;
-            white-space: nowrap;
         }
         .btn-search { background: #1890ff; color: white; }
         .btn-location { background: #52c41a; color: white; }
@@ -146,6 +151,22 @@
             font-size: 13px;
             cursor: pointer;
         }
+
+        /* 跟进状态标签 */
+        .followup-status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 6px;
+        }
+        .followup-status-badge.未联系 { background: #999; color: white; }
+        .followup-status-badge.已拜访 { background: #1890ff; color: white; }
+        .followup-status-badge.意向强 { background: #fa8c16; color: white; }
+        .followup-status-badge.已报价 { background: #13c2c2; color: white; }
+        .followup-status-badge.洽谈中 { background: #722ed1; color: white; }
+        .followup-status-badge.已成交 { background: #52c41a; color: white; }
+        .followup-status-badge.已终止 { background: #ff4d4f; color: white; }
         
         /* 统计 */
         .stats {
@@ -157,7 +178,7 @@
         }
         
         /* 店铺卡片 */
-        .shop-list { padding: 10px; }
+        .shop-list { padding: 10px; min-height: 200px; }
         .shop-card {
             background: white;
             border-radius: 8px;
@@ -198,6 +219,11 @@
             font-weight: bold;
             color: #333;
             flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
         }
         .shop-distance {
             background: #1890ff;
@@ -206,6 +232,7 @@
             border-radius: 10px;
             font-size: 12px;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .shop-info {
             font-size: 13px;
@@ -227,21 +254,30 @@
         }
         .shop-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .shop-actions a, .shop-actions button {
             flex: 1;
-            padding: 10px;
+            padding: 10px 6px;
             text-align: center;
             border-radius: 4px;
             text-decoration: none;
             font-size: 14px;
             cursor: pointer;
             border: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .shop-actions > div {
+            flex: 1;
         }
         .btn-call { background: #52c41a; color: white; }
         .btn-nav { background: #1890ff; color: white; }
         .btn-add { background: #faad14; color: white; }
+        .btn-followup { background: #722ed1; color: white; }
+        .btn-delete { background: #ff4d4f; color: white; }
         
         /* 添加新商户提示 */
         .add-hint {
@@ -261,12 +297,102 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        
+        /* 跟进记录 */
+        .followup-section {
+            margin-top: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 8px;
+        }
+        .followup-toggle {
+            width: 100%;
+            padding: 6px 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #722ed1;
+            text-align: left;
+        }
+        .followup-toggle:hover { background: #ede8fe; }
+        .followup-panel {
+            display: none;
+            margin-top: 8px;
+        }
+        .followup-panel.open { display: block; }
+        .followup-input-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .followup-input-row select {
+            flex: 0 0 auto;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            min-width: 90px;
+        }
+        .followup-input-row input {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .followup-input-row button {
+            padding: 6px 12px;
+            background: #722ed1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .followup-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .followup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
+            gap: 6px;
+        }
+        .followup-item:last-child { border-bottom: none; }
+        .followup-text { flex: 1; color: #333; word-break: break-all; font-size: 14px; }
+        .followup-time { color: #999; white-space: nowrap; font-size: 11px; }
+        .followup-del {
+            background: none;
+            border: none;
+            color: #ff4d4f;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 2px;
+            flex-shrink: 0;
+        }
+        .followup-empty {
+            text-align: center;
+            color: #bbb;
+            font-size: 12px;
+            padding: 8px 0;
+        }
     </style>
 </head>
 <body>
     <div class="header" style="position:relative;">
-        <h1>翔安区5街道粮油客户地图</h1>
-        <p>数据来源于高德整理 | 2026年3月</p>
+        <div class="header-title">
+            <h1>翔安区5街道粮油客户地图</h1>
+            <p>数据来源于高德整理 | 2026年3月</p>
+        </div>
         
         <!-- 数据操作菜单 -->
         <div class="data-actions">
@@ -281,16 +407,11 @@
     <!-- 搜索和我的位置同一行 -->
     <div class="search-location-row">
         <input type="text" id="searchInput" placeholder="搜索店铺名称、地址..." onkeypress="if(event.key==='Enter')searchShop()">
-        <button class="btn-search" onclick="searchShop()">🔍 搜索</button>
+        <button class="btn-search" onclick="searchShop()">🔍</button>
         <button class="btn-location" onclick="getLocation()">📍 我的位置</button>
     </div>
     
-    <!-- 来源标识 -->
-    <div class="source-indicator">
-        <span><span class="dot dot-manual"></span>手动添加</span>
-        <span><span class="dot dot-local"></span>本地数据</span>
-        <span><span class="dot dot-gaode"></span>高德在线</span>
-    </div>
+
     
     <!-- 筛选 -->
     <div class="controls">
@@ -302,7 +423,6 @@
                 <label><input type="checkbox" value="凤翔街道" onchange="filterShops()"> 凤翔街道</label>
                 <label><input type="checkbox" value="金海街道" onchange="filterShops()"> 金海街道</label>
                 <label><input type="checkbox" value="大嶝街道" onchange="filterShops()"> 大嶝街道</label>
-                <label><input type="checkbox" value="马巷街道" onchange="filterShops()"> 马巷街道</label>
                 <label style="background:#f6ffed;"><input type="checkbox" value="手动添加" onchange="filterShops()"> 手动添加</label>
             </div>
         </div>
@@ -317,6 +437,18 @@
                 <label><input type="checkbox" value="F-批发配送" onchange="filterShops()"> 批发配送</label>
                 <label><input type="checkbox" value="G-烟酒茶" onchange="filterShops()"> 烟酒茶</label>
                 <label><input type="checkbox" value="I-其他" onchange="filterShops()"> 其他</label>
+            </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-label">跟进状态：</div>
+            <div class="checkbox-group" id="statusFilters">
+                <label><input type="checkbox" value="未联系" onchange="filterShops()"> 未联系</label>
+                <label><input type="checkbox" value="已拜访" onchange="filterShops()"> 已拜访</label>
+                <label><input type="checkbox" value="意向强" onchange="filterShops()"> 意向强</label>
+                <label><input type="checkbox" value="已报价" onchange="filterShops()"> 已报价</label>
+                <label><input type="checkbox" value="洽谈中" onchange="filterShops()"> 洽谈中</label>
+                <label><input type="checkbox" value="已成交" onchange="filterShops()"> 已成交</label>
+                <label><input type="checkbox" value="已终止" onchange="filterShops()"> 已终止</label>
             </div>
         </div>
     </div>
@@ -401,11 +533,32 @@
                 }
                 
                 const color = getCategoryColor(shop.category);
+                const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
+                const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
+                const followupCount = followupData.length;
+                const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                let statusBadge = '';
+                if (currentStatus === '未联系') {
+                    statusBadge = '<span class="followup-status-badge 未联系">未联系</span>';
+                } else if (currentStatus === '已拜访') {
+                    statusBadge = '<span class="followup-status-badge 已拜访">已拜访</span>';
+                } else if (currentStatus === '意向强') {
+                    statusBadge = '<span class="followup-status-badge 意向强">意向强</span>';
+                } else if (currentStatus === '已报价') {
+                    statusBadge = '<span class="followup-status-badge 已报价">已报价</span>';
+                } else if (currentStatus === '洽谈中') {
+                    statusBadge = '<span class="followup-status-badge 洽谈中">洽谈中</span>';
+                } else if (currentStatus === '已成交') {
+                    statusBadge = '<span class="followup-status-badge 已成交">已成交</span>';
+                } else if (currentStatus === '已终止') {
+                    statusBadge = '<span class="followup-status-badge 已终止">已终止</span>';
+                }
+                const followupBtnText = followupCount > 0 ? `📋 跟进（${followupCount}）` : '📋 跟进';
                 
                 return `
                     <div class="shop-card ${cardClass}">
                         <div class="shop-header">
-                            <div class="shop-name">${shop.name}<span class="source-badge ${badgeClass}">${badgeText}</span></div>
+                            <div class="shop-name">${shop.name}<span class="source-badge ${badgeClass}">${badgeText}</span>${statusBadge}</div>
                             ${shop.distance ? `<span class="shop-distance">${shop.distance}km</span>` : ''}
                         </div>
                         <div class="shop-info">
@@ -416,9 +569,30 @@
                         <div class="shop-actions">
                             ${isGaode ? 
                                 `<button class="btn-add" onclick="addShopFromGaode('${shop.id || shop.name}')">➕ 添加到本地</button>` :
-                                (shop.phone ? `<a href="tel:${shop.phone}" class="btn-call">📞 拨打</a>` : '<div></div>')
+                                (shop.phone ? `<a href="tel:${shop.phone}" class="btn-call">📞 拨打 ${shop.phone}</a>` : '<div></div>')
                             }
                             <button class="btn-nav" onclick="navigate('${shop.lng}','${shop.lat}','${shop.name}')">🗺️ 导航</button>
+                            <button class="btn-followup" onclick="toggleFollowup('${shopKey}')">${followupBtnText}</button>
+                            ${isManual ? `<button class="btn-delete" onclick="deleteShop('${shop.id || shop.name}', '${shopKey}')">🗑️ 删除</button>` : ''}
+                        </div>
+                        <div class="followup-section">
+                            <div class="followup-panel" id="panel_${shopKey}">
+                                <div class="followup-input-row">
+                                    <select id="status_${shopKey}" style="padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px;">
+                                        <option value="">选择状态</option>
+                                        <option value="未联系">未联系</option>
+                                        <option value="已拜访">已拜访</option>
+                                        <option value="意向强">意向强</option>
+                                        <option value="已报价">已报价</option>
+                                        <option value="洽谈中">洽谈中</option>
+                                        <option value="已成交">已成交</option>
+                                        <option value="已终止">已终止</option>
+                                    </select>
+                                    <input type="text" id="input_${shopKey}" placeholder="输入跟进备注..." onkeypress="if(event.key==='Enter')addFollowup('${shopKey}')">
+                                    <button onclick="addFollowup('${shopKey}')">添加</button>
+                                </div>
+                                <div class="followup-list" id="list_${shopKey}"></div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -532,7 +706,7 @@
         // 从地址提取镇街
         function getTownFromAddress(address) {
             if (!address) return '';
-            const towns = ['香山街道', '新店街道', '凤翔街道', '金海街道', '大嶝街道', '马巷街道'];
+            const towns = ['香山街道', '新店街道', '凤翔街道', '金海街道', '大嶝街道'];
             for (const town of towns) {
                 if (address.includes(town)) return town;
             }
@@ -601,6 +775,26 @@
             // 重新搜索
             searchShop();
         }
+
+        // 删除手动添加的商户
+        function deleteShop(shopId, shopKey) {
+            if (!confirm('确定要删除这个商户吗？')) return;
+            
+            // 从本地存储中删除
+            const manualShops = JSON.parse(localStorage.getItem('manualShops') || '[]');
+            const filtered = manualShops.filter(s => (s.id || s.name) !== shopId);
+            localStorage.setItem('manualShops', JSON.stringify(filtered));
+            
+            // 从跟进记录中删除
+            localStorage.removeItem(shopKey);
+            
+            // 从主列表中删除
+            shops = shops.filter(s => (s.id || s.name + s.address) !== shopId);
+            filteredShops = filteredShops.filter(s => (s.id || s.name + s.address) !== shopId);
+            
+            updateStats();
+            renderShops();
+        }
         
         // 导航
         function navigate(lng, lat, name) {
@@ -614,7 +808,8 @@
         // 筛选
         function filterShops() {
             const townChecks = Array.from(document.querySelectorAll('#townFilters input:checked')).map(cb => cb.value);
-            const categoryChecks = Array.from(document.querySelectorAll('.controls .checkbox-group:not(#townFilters) input:checked')).map(cb => cb.value);
+            const categoryChecks = Array.from(document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked')).map(cb => cb.value);
+            const statusChecks = Array.from(document.querySelectorAll('#statusFilters input:checked')).map(cb => cb.value);
             
             filteredShops = shops.filter(shop => {
                 // 镇街筛选
@@ -630,7 +825,18 @@
                 // 分类筛选
                 const categoryMatch = categoryChecks.length === 0 || categoryChecks.includes(shop.category);
                 
-                return townMatch && categoryMatch;
+                // 跟进状态筛选
+                let statusMatch = statusChecks.length === 0;
+                if (!statusMatch) {
+                    const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
+                    const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
+                    const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                    if (statusChecks.includes(currentStatus)) {
+                        statusMatch = true;
+                    }
+                }
+                
+                return townMatch && categoryMatch && statusMatch;
             });
             
             renderShops();
@@ -652,8 +858,6 @@
                     
                     filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
                     renderShops();
-                    
-                    alert('已按距离排序，最近的店铺在上方');
                 }, () => {
                     alert('无法获取位置，请检查定位权限');
                 });
@@ -676,6 +880,100 @@
         // 菜单
         function toggleMenu() {
             document.getElementById('menuDropdown').classList.toggle('show');
+        }
+        
+        // 跟进相关
+        function toggleFollowup(shopKey) {
+            const panel = document.getElementById('panel_' + shopKey);
+            if (!panel) return;
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                renderFollowupList(shopKey);
+                // 默认选中最近使用的状态
+                const lastStatus = localStorage.getItem('lastStatus_' + shopKey);
+                const statusSelect = document.getElementById('status_' + shopKey);
+                if (lastStatus && statusSelect) {
+                    statusSelect.value = lastStatus;
+                }
+            }
+        }
+        
+        function renderFollowupList(shopKey) {
+            const list = document.getElementById('list_' + shopKey);
+            if (!list) return;
+            const notes = JSON.parse(localStorage.getItem(shopKey) || '[]');
+            if (notes.length === 0) {
+                list.innerHTML = '<div class="followup-empty">暂无跟进记录</div>';
+                return;
+            }
+            list.innerHTML = notes.map((note, idx) => {
+                const statusTag = note.status ? `<span class="followup-status-badge ${note.status}" style="font-size:10px;margin-right:4px;">${note.status}</span>` : '';
+                return `
+                <div class="followup-item">
+                    <span class="followup-text">${statusTag}${note.text}</span>
+                    <span class="followup-time">${note.time}</span>
+                    <button class="followup-del" onclick="deleteFollowup('${shopKey}',${idx})">×</button>
+                </div>
+            `}).join('');
+        }
+        
+        function addFollowup(shopKey) {
+            const input = document.getElementById('input_' + shopKey);
+            if (!input) return;
+            const text = input.value.trim();
+            const statusSelect = document.getElementById('status_' + shopKey);
+            const status = statusSelect ? statusSelect.value : '';
+            if (!text && !status) return;
+            const notes = JSON.parse(localStorage.getItem(shopKey) || '[]');
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            notes.unshift({ text, status, time: timeStr });
+            localStorage.setItem(shopKey, JSON.stringify(notes));
+            // 记住最近使用的状态
+            if (status) {
+                localStorage.setItem('lastStatus_' + shopKey, status);
+            }
+            input.value = '';
+            if (statusSelect) statusSelect.value = '';
+            renderFollowupList(shopKey);
+            // 更新按钮计数
+            const count = notes.length;
+            const btns = document.querySelectorAll('.btn-followup');
+            btns.forEach(btn => {
+                if (btn.onclick && btn.onclick.toString().includes(shopKey)) {
+                    btn.textContent = count > 0 ? `📋 跟进（${count}）` : '📋 跟进';
+                }
+            });
+            // 更新卡片上的状态标记
+            const card = document.querySelector(`[id="panel_${shopKey}"]`) ? document.querySelector(`[id="panel_${shopKey}"]`).closest('.shop-card') : null;
+            if (card) {
+                const shopName = card.querySelector('.shop-name');
+                // 移除旧的状态标记
+                const oldBadge = shopName.querySelector('.followup-status-badge');
+                if (oldBadge) oldBadge.remove();
+                // 添加新状态标记
+                if (status) {
+                    const badge = document.createElement('span');
+                    badge.className = `followup-status-badge ${status}`;
+                    badge.textContent = status;
+                    shopName.appendChild(badge);
+                }
+            }
+        }
+        
+        function deleteFollowup(shopKey, idx) {
+            const notes = JSON.parse(localStorage.getItem(shopKey) || '[]');
+            notes.splice(idx, 1);
+            localStorage.setItem(shopKey, JSON.stringify(notes));
+            renderFollowupList(shopKey);
+            // 更新按钮计数
+            const count = notes.length;
+            const btns = document.querySelectorAll('.btn-followup');
+            btns.forEach(btn => {
+                if (btn.onclick && btn.onclick.toString().includes(shopKey)) {
+                    btn.textContent = count > 0 ? `📋 跟进（${count}）` : '📋 跟进';
+                }
+            });
         }
         
         // 点击其他地方关闭菜单
