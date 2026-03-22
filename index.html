@@ -130,26 +130,44 @@
             padding: 10px;
             border-bottom: 1px solid #eee;
         }
-        .filter-group { margin-bottom: 10px; }
+        .filter-group {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
         .filter-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
         }
         .checkbox-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
         }
         .checkbox-group label {
             display: flex;
             align-items: center;
             gap: 4px;
             padding: 4px 10px;
-            background: #f5f5f5;
-            border-radius: 4px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 20px;
             font-size: 13px;
             cursor: pointer;
+            transition: all 0.15s;
+        }
+        .checkbox-group label:hover {
+            background: #f0f0f0;
+            border-color: #ccc;
+        }
+        .checkbox-group label input:checked + span,
+        .checkbox-group label:has(input:checked) {
+            color: #722ed1;
+            font-weight: 500;
         }
 
         /* 跟进状态标签 */
@@ -442,6 +460,7 @@
         <div class="filter-group">
             <div class="filter-label">跟进状态：</div>
             <div class="checkbox-group" id="statusFilters">
+                <label style="background:#f6ffed; border-color:#b7eb8f;"><input type="checkbox" value="有记录" onchange="filterShops()"> 有记录</label>
                 <label><input type="checkbox" value="未联系" onchange="filterShops()"> 未联系</label>
                 <label><input type="checkbox" value="已拜访" onchange="filterShops()"> 已拜访</label>
                 <label><input type="checkbox" value="意向强" onchange="filterShops()"> 意向强</label>
@@ -839,43 +858,49 @@
             const categoryChecks = Array.from(document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked')).map(cb => cb.value);
             const statusChecks = Array.from(document.querySelectorAll('#statusFilters input:checked')).map(cb => cb.value);
             
-            filteredShops = shops.filter(shop => {
-                // 搜索关键词匹配（如果有）
-                let searchMatch = !currentSearchKeyword;
-                if (currentSearchKeyword) {
-                    const kw = currentSearchKeyword.toLowerCase();
-                    searchMatch = shop.name.toLowerCase().includes(kw) || (shop.address || '').toLowerCase().includes(kw);
-                }
-                
-                // 镇街筛选
-                let townMatch = townChecks.length === 0;
-                if (!townMatch) {
-                    if (shop._source === 'manual' && townChecks.includes('手动添加')) {
-                        townMatch = true;
-                    } else if (townChecks.includes(shop.town) || townChecks.includes(shop.street)) {
-                        townMatch = true;
+            // 用 setTimeout 推迟执行，让 checkbox 先完成 UI 更新
+            setTimeout(() => {
+                filteredShops = shops.filter(shop => {
+                    // 搜索关键词匹配（如果有）
+                    let searchMatch = !currentSearchKeyword;
+                    if (currentSearchKeyword) {
+                        const kw = currentSearchKeyword.toLowerCase();
+                        searchMatch = shop.name.toLowerCase().includes(kw) || (shop.address || '').toLowerCase().includes(kw);
                     }
-                }
-                
-                // 分类筛选
-                const categoryMatch = categoryChecks.length === 0 || categoryChecks.includes(shop.category);
-                
-                // 跟进状态筛选
-                let statusMatch = statusChecks.length === 0;
-                if (!statusMatch) {
-                    const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
-                    const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
-                    const currentStatus = followupData.length > 0 ? followupData[0].status : '';
-                    if (statusChecks.includes(currentStatus)) {
-                        statusMatch = true;
+
+                    // 镇街筛选
+                    let townMatch = townChecks.length === 0;
+                    if (!townMatch) {
+                        if (shop._source === 'manual' && townChecks.includes('手动添加')) {
+                            townMatch = true;
+                        } else if (townChecks.includes(shop.town) || townChecks.includes(shop.street)) {
+                            townMatch = true;
+                        }
                     }
-                }
-                
-                return searchMatch && townMatch && categoryMatch && statusMatch;
-            });
-            
-            renderShops();
-            updateStats();
+
+                    // 分类筛选
+                    const categoryMatch = categoryChecks.length === 0 || categoryChecks.includes(shop.category);
+
+                    // 跟进状态筛选
+                    let statusMatch = statusChecks.length === 0;
+                    if (!statusMatch) {
+                        const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
+                        const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
+                        const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                        // 有记录：只要有跟进记录即可
+                        if (statusChecks.includes('有记录')) {
+                            statusMatch = followupData.length > 0;
+                        } else {
+                            statusMatch = statusChecks.includes(currentStatus);
+                        }
+                    }
+
+                    return searchMatch && townMatch && categoryMatch && statusMatch;
+                });
+
+                renderShops();
+                updateStats();
+            }, 0);
         }
         
         // 我的位置
