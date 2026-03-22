@@ -464,6 +464,7 @@
         let filteredShops = [];
         let currentSearchKeyword = '';
         let currentSearchResults = [];
+        let userLat = null, userLng = null;
         
         // 初始化
         function init() {
@@ -489,6 +490,9 @@
             filteredShops = [...shops];
             updateStats();
             renderShops();
+            
+            // 页面加载后立即请求定位
+            getLocation();
         }
         
         function updateStats() {
@@ -515,6 +519,11 @@
         }
         
         function renderShops() {
+            // 有定位时按距离排序
+            if (userLat !== null) {
+                filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+            }
+            
             const container = document.getElementById('shopList');
             if (filteredShops.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:50px;color:#999">没有找到店铺</div>';
@@ -650,6 +659,15 @@
             currentSearchResults = allResults;
             currentSearchKeyword = keyword;
             filteredShops = allResults;
+            
+            // 如果已获取定位，为所有结果计算距离
+            if (userLat !== null) {
+                filteredShops.forEach(shop => {
+                    if (shop.lat && shop.lng) {
+                        shop.distance = calculateDistance(userLat, userLng, parseFloat(shop.lat), parseFloat(shop.lng));
+                    }
+                });
+            }
             
             // 更新统计
             const manualCount = localResults.filter(s => s._source === 'manual').length;
@@ -864,23 +882,28 @@
         function getLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(position => {
-                    const userLat = position.coords.latitude;
-                    const userLng = position.coords.longitude;
+                    userLat = position.coords.latitude;
+                    userLng = position.coords.longitude;
                     
-                    // 计算距离并排序
+                    // 计算所有店铺距离
                     shops.forEach(shop => {
                         if (shop.lat && shop.lng) {
                             shop.distance = calculateDistance(userLat, userLng, parseFloat(shop.lat), parseFloat(shop.lng));
                         }
                     });
                     
-                    filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-                    renderShops();
+                    // 重新筛选+排序（带上当前搜索词和筛选条件）
+                    if (currentSearchKeyword || document.querySelectorAll('#townFilters input:checked').length > 0 || document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked').length > 0 || document.querySelectorAll('#statusFilters input:checked').length > 0) {
+                        filterShops();
+                    } else {
+                        filteredShops = [...shops];
+                        filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+                        renderShops();
+                    }
+                    updateStats();
                 }, () => {
-                    alert('无法获取位置，请检查定位权限');
+                    // 定位被拒绝，静默处理，不弹窗
                 });
-            } else {
-                alert('浏览器不支持定位');
             }
         }
         
