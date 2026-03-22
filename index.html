@@ -511,7 +511,7 @@
             renderShops();
             
             // 页面加载后立即请求定位
-            getLocation();
+            getLocation(); // 会在回调里直接更新 filteredShops 并 renderShops
         }
         
         function updateStats() {
@@ -917,17 +917,54 @@
                         }
                     });
                     
-                    // 重新筛选+排序（带上当前搜索词和筛选条件）
-                    if (currentSearchKeyword || document.querySelectorAll('#townFilters input:checked').length > 0 || document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked').length > 0 || document.querySelectorAll('#statusFilters input:checked').length > 0) {
-                        filterShops();
-                    } else {
-                        filteredShops = [...shops];
-                        filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-                        renderShops();
-                    }
+                    // 直接重新筛选+排序（不经过 setTimeout，确保立即更新）
+                    const townChecks = Array.from(document.querySelectorAll('#townFilters input:checked')).map(cb => cb.value);
+                    const categoryChecks = Array.from(document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked')).map(cb => cb.value);
+                    const statusChecks = Array.from(document.querySelectorAll('#statusFilters input:checked')).map(cb => cb.value);
+                    
+                    filteredShops = shops.filter(shop => {
+                        // 搜索关键词匹配
+                        let searchMatch = !currentSearchKeyword;
+                        if (currentSearchKeyword) {
+                            const kw = currentSearchKeyword.toLowerCase();
+                            searchMatch = shop.name.toLowerCase().includes(kw) || (shop.address || '').toLowerCase().includes(kw);
+                        }
+                        
+                        // 镇街筛选
+                        let townMatch = townChecks.length === 0;
+                        if (!townMatch) {
+                            if (shop._source === 'manual' && townChecks.includes('手动添加')) {
+                                townMatch = true;
+                            } else if (townChecks.includes(shop.town) || townChecks.includes(shop.street)) {
+                                townMatch = true;
+                            }
+                        }
+                        
+                        // 分类筛选
+                        const categoryMatch = categoryChecks.length === 0 || categoryChecks.includes(shop.category);
+                        
+                        // 跟进状态筛选
+                        let statusMatch = statusChecks.length === 0;
+                        if (!statusMatch) {
+                            const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
+                            const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
+                            const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                            if (statusChecks.includes('有记录')) {
+                                statusMatch = followupData.length > 0;
+                            } else {
+                                statusMatch = statusChecks.includes(currentStatus);
+                            }
+                        }
+                        
+                        return searchMatch && townMatch && categoryMatch && statusMatch;
+                    });
+                    
+                    // 按距离排序
+                    filteredShops.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+                    renderShops();
                     updateStats();
                 }, () => {
-                    // 定位被拒绝，静默处理，不弹窗
+                    // 定位被拒绝，静默处理
                 });
             }
         }
