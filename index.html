@@ -517,7 +517,8 @@
             updateStats();
             renderShops();
             
-            // 页面加载后不自动定位，等待用户点击"我的位置"按钮
+            // 页面加载后自动请求定位
+            getLocation();
         }
         
         function updateStats() {
@@ -578,21 +579,22 @@
                 const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
                 const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
                 const followupCount = followupData.length;
-                const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                const currentStatus = followupData.length > 0 ? followupData[0].status : '未联系';  // 筛选用：无记录视为未联系
+                const displayStatus = followupData.length > 0 ? followupData[0].status : '';  // 显示用：空记录不贴标签
                 let statusBadge = '';
-                if (currentStatus === '未联系') {
+                if (displayStatus === '未联系') {
                     statusBadge = '<span class="followup-status-badge 未联系">未联系</span>';
-                } else if (currentStatus === '已拜访') {
+                } else if (displayStatus === '已拜访') {
                     statusBadge = '<span class="followup-status-badge 已拜访">已拜访</span>';
-                } else if (currentStatus === '意向强') {
+                } else if (displayStatus === '意向强') {
                     statusBadge = '<span class="followup-status-badge 意向强">意向强</span>';
-                } else if (currentStatus === '已报价') {
+                } else if (displayStatus === '已报价') {
                     statusBadge = '<span class="followup-status-badge 已报价">已报价</span>';
-                } else if (currentStatus === '洽谈中') {
+                } else if (displayStatus === '洽谈中') {
                     statusBadge = '<span class="followup-status-badge 洽谈中">洽谈中</span>';
-                } else if (currentStatus === '已成交') {
+                } else if (displayStatus === '已成交') {
                     statusBadge = '<span class="followup-status-badge 已成交">已成交</span>';
-                } else if (currentStatus === '已终止') {
+                } else if (displayStatus === '已终止') {
                     statusBadge = '<span class="followup-status-badge 已终止">已终止</span>';
                 }
                 const followupBtnText = followupCount > 0 ? `📋 跟进（${followupCount}）` : '📋 跟进';
@@ -864,9 +866,7 @@
             const categoryChecks = Array.from(document.querySelectorAll('.controls .checkbox-group:not(#townFilters):not(#statusFilters) input:checked')).map(cb => cb.value);
             const statusChecks = Array.from(document.querySelectorAll('#statusFilters input:checked')).map(cb => cb.value);
             
-            // 用 setTimeout 推迟执行，让 checkbox 先完成 UI 更新
-            setTimeout(() => {
-                filteredShops = shops.filter(shop => {
+            filteredShops = shops.filter(shop => {
                     // 搜索关键词匹配（如果有）
                     let searchMatch = !currentSearchKeyword;
                     if (currentSearchKeyword) {
@@ -887,12 +887,12 @@
                     // 分类筛选
                     const categoryMatch = categoryChecks.length === 0 || categoryChecks.includes(shop.category);
 
-                    // 跟进状态筛选
+                    // 跟进状态筛选（无记录视为未联系）
                     let statusMatch = statusChecks.length === 0;
                     if (!statusMatch) {
                         const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
                         const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
-                        const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                        const currentStatus = followupData.length > 0 ? followupData[0].status : '未联系';
                         // 有记录：与其他状态取交集（AND）
                         if (statusChecks.includes('有记录')) {
                             const otherStatuses = statusChecks.filter(s => s !== '有记录');
@@ -908,7 +908,6 @@
 
                 renderShops();
                 updateStats();
-            }, 0);
         }
         
         // 我的位置 - 高德 JS API 标准定位（使用官方 Loader + 安全密钥）
@@ -964,7 +963,7 @@
                 if (!statusMatch) {
                     const shopKey = 'followup_' + (shop.id || shop.name + shop.address);
                     const followupData = JSON.parse(localStorage.getItem(shopKey) || '[]');
-                    const currentStatus = followupData.length > 0 ? followupData[0].status : '';
+                    const currentStatus = followupData.length > 0 ? followupData[0].status : '未联系';
                     if (statusChecks.includes('有记录')) {
                             const otherStatuses = statusChecks.filter(s => s !== '有记录');
                             statusMatch = followupData.length > 0 &&
