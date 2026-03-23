@@ -719,13 +719,40 @@
             }
         }
         
-        // 高德API搜索
+        // 高德搜索 - 使用 AMap JS SDK PlaceSearch 插件
+        let _placeSearch = null;
+        let _placeSearchLoading = false;
+        let _amapLoaderPromise = null;
+
+        function getAmapLoader() {
+            if (!_amapLoaderPromise) {
+                _amapLoaderPromise = new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        if (_amapLoaderPromise === p) {
+                            _amapLoaderPromise = null;
+                            _placeSearchLoading = false;
+                        }
+                        reject(new Error('AMap加载超时'));
+                    }, 8000);
+                    const p = AMapLoader.load({
+                        key: '253a0a34d6e4872b51d5d4b9cebd1935',
+                        version: '2.0',
+                        plugins: ['AMap.Geolocation', 'AMap.PlaceSearch']
+                    });
+                    p.then(v => { clearTimeout(timeout); resolve(v); })
+                     .catch(e => { clearTimeout(timeout); _amapLoaderPromise = null; _placeSearchLoading = false; reject(e); });
+                });
+            }
+            return _amapLoaderPromise;
+        }
+
         async function searchGaode(keyword) {
             try {
-                const url = `https://restapi.amap.com/v3/place/text?key=253a0a34d6e4872b51d5d4b9cebd1935&keywords=${encodeURIComponent(keyword)}&city=350200&offset=20&page=1&extensions=all`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
+                const REST_KEY = '0b318e4eee1f11fcc5d7e54285169180';
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('超时')), 5000));
+                const fetchP = fetch(`https://restapi.amap.com/v3/place/text?key=${REST_KEY}&keywords=${encodeURIComponent(keyword)}&city=350200&offset=20&page=1&extensions=all`);
+                const res = await Promise.race([fetchP, timeout]);
+                const data = await res.json();
                 if (data.status === '1' && data.pois && data.pois.length > 0) {
                     return data.pois.map(poi => ({
                         id: poi.id,
@@ -905,18 +932,13 @@
 
                     return searchMatch && townMatch && categoryMatch && statusMatch;
                 });
-
                 renderShops();
                 updateStats();
         }
         
         // 我的位置 - 高德 JS API 标准定位（使用官方 Loader + 安全密钥）
         function getLocation() {
-            AMapLoader.load({
-                key: '253a0a34d6e4872b51d5d4b9cebd1935',
-                version: '2.0',
-                plugins: ['AMap.Geolocation']
-            }).then(AMap => {
+            getAmapLoader().then(AMap => {
                 var geo = new AMap.Geolocation({
                     enableHighAccuracy: true,
                     timeout: 10000,
